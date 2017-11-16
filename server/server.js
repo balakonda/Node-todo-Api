@@ -1,12 +1,13 @@
 require('./config/config.js');
 const _ = require('lodash');
-var mongoose = require('./db/mongoose.js');
-var { Todo } = require('./models/todo.js');
+var mongoose = require('./db/mongoose');
+var { Todo } = require('./models/todo');
+var { User } = require('./models/user');
+var { authenticate } = require('./middleware/authenticate');
 
 var express = require('express');
 var bodyParser = require('body-parser');
 var { ObjectId } = require('mongodb');
-
 
 
 var app = express();
@@ -96,6 +97,35 @@ app.patch('/todos/:id', (req, res) => {
 		}
 	}).catch((e) => res.status(404).send(e));
 	
+});
+
+
+//Users
+app.post('/users', (req, res) => {
+	//console.log(req.body);
+	var body = _.pick(req.body, ['email', 'password']);
+	var user = new User(body);
+	//console.log(user);
+	// user.save().then((doc) => {
+	// 	console.log(doc)
+	// 	res.send(doc);
+	// }, (e) => {
+	// 	res.status(400).send(e);
+	// });
+	user.save().then((res) => {
+		console.log(res);
+		return user.generateAuthToken();
+	}).then((token) => {
+		console.log('token');
+		console.log(res);
+		res.header('x-auth', token).send(user);
+	}).catch((e) => {
+		res.status(400).send(e);
+	});
+});
+
+app.get('/users/me', authenticate, (req, res) => {
+	res.send(req.user);
 });
 
 app.listen(PORT, () => {
